@@ -89,12 +89,30 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </h3>
 
           {botSettings && (
-            <pre className="text-sm leading-7 text-neutral-300 whitespace-pre">
-📈 Trade Alerts        : {botSettings.tradeAlerts ? "ON" : "OFF"}
-💼 PnL Alerts          : {botSettings.pnlAlerts ? "ON" : "OFF"}
-💲 Trade Alert Limit   : ${botSettings.limit}
-            </pre>
-          )}
+  <div className="space-y-2 text-sm text-neutral-300">
+    <div className="flex justify-between">
+      <span>📈 Trade Alerts</span>
+      <span className="font-medium">
+        {botSettings.tradeAlerts ? "ON" : "OFF"}
+      </span>
+    </div>
+
+    <div className="flex justify-between">
+      <span>💼 PnL Alerts</span>
+      <span className="font-medium">
+        {botSettings.pnlAlerts ? "ON" : "OFF"}
+      </span>
+    </div>
+
+    <div className="flex justify-between">
+      <span>💲 Trade Alert Limit</span>
+      <span className="font-medium">
+        ${botSettings.limit}
+      </span>
+    </div>
+  </div>
+)}
+
         </section>
 
         {/* MINI APP SETTINGS */}
@@ -176,3 +194,4 @@ function RadioRow({
     </button>
   );
 }
+
