@@ -19,7 +19,6 @@ type SettingsPanelProps = {
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { user } = useTelegram();
   const avatar = user?.photo_url;
-  const tgId = user?.id;
 
   const displayName =
     user?.first_name
@@ -32,22 +31,29 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   /* ───────── MINI APP SETTINGS ───────── */
   const [homeView, setHomeView] = useState<HomeView>("trades");
 
+  /* ───────── LOAD DATA (FIXED) ───────── */
   useEffect(() => {
-    if (!tgId) return;
+    if (!user || !user.id) return;
 
-    getSettings(tgId).then((data) => {
-      setBotSettings({
-        pnlAlerts: data.pnl_alerts,
-        tradeAlerts: data.trade_alerts,
-        limit: String(data.limit),
+    const tgId = user.id;
+
+    getSettings(tgId)
+      .then((data) => {
+        setBotSettings({
+          pnlAlerts: data.pnl_alerts,
+          tradeAlerts: data.trade_alerts,
+          limit: String(data.limit),
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load bot settings", err);
       });
-    });
 
     const saved = localStorage.getItem("miniapp_home_view");
     if (saved === "trades" || saved === "pnl") {
       setHomeView(saved);
     }
-  }, [tgId]);
+  }, [user]);
 
   const handleSave = () => {
     localStorage.setItem("miniapp_home_view", homeView);
@@ -71,11 +77,16 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           <div>
             <div className="font-semibold">{displayName}</div>
-            <div className="text-xs text-neutral-400">TG ID: {tgId}</div>
+            <div className="text-xs text-neutral-400">
+              TG ID: {user?.id}
+            </div>
           </div>
         </div>
 
-        <button onClick={onClose} className="text-white/50 hover:text-white">
+        <button
+          onClick={onClose}
+          className="text-white/50 hover:text-white"
+        >
           ✕
         </button>
       </div>
@@ -89,33 +100,32 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </h3>
 
           {botSettings && (
-  <div className="space-y-2 text-sm text-neutral-300">
-    <div className="flex justify-between">
-      <span>📈 Trade Alerts</span>
-      <span className="font-medium">
-        {botSettings.tradeAlerts ? "ON" : "OFF"}
-      </span>
-    </div>
+            <div className="space-y-2 text-sm text-neutral-300">
+              <div className="flex justify-between">
+                <span>📈 Trade Alerts</span>
+                <span className="font-medium">
+                  {botSettings.tradeAlerts ? "ON" : "OFF"}
+                </span>
+              </div>
 
-    <div className="flex justify-between">
-      <span>💼 PnL Alerts</span>
-      <span className="font-medium">
-        {botSettings.pnlAlerts ? "ON" : "OFF"}
-      </span>
-    </div>
+              <div className="flex justify-between">
+                <span>💼 PnL Alerts</span>
+                <span className="font-medium">
+                  {botSettings.pnlAlerts ? "ON" : "OFF"}
+                </span>
+              </div>
 
-    <div className="flex justify-between">
-      <span>💲 Trade Alert Limit</span>
-      <span className="font-medium">
-        ${botSettings.limit}
-      </span>
-    </div>
-  </div>
-)}
-
+              <div className="flex justify-between">
+                <span>💲 Trade Alert Limit</span>
+                <span className="font-medium">
+                  ${botSettings.limit}
+                </span>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* MINI APP SETTINGS */}
+        {/* MINI APP HOME */}
         <section>
           <h3 className="text-xs uppercase tracking-widest text-neutral-500 mb-4">
             Mini App Home
