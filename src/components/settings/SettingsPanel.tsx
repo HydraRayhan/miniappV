@@ -2,93 +2,56 @@
 
 import { useEffect, useState } from "react";
 import { useTelegram } from "@/lib/useTelegram";
-import { getSettings, saveSettings } from "@/lib/api";
+import { getSettings } from "@/lib/api";
 
-type SettingsDraft = {
+type BotSettings = {
   pnlAlerts: boolean;
   tradeAlerts: boolean;
   limit: string;
 };
+
+type HomeView = "trades" | "pnl";
 
 type SettingsPanelProps = {
   onClose: () => void;
 };
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
-  /* ───────── TELEGRAM USER ───────── */
   const { user } = useTelegram();
   const avatar = user?.photo_url;
+  const tgId = user?.id;
 
   const displayName =
     user?.first_name
       ? `${user.first_name}${user.last_name ? " " + user.last_name : ""}`
       : "Telegram User";
 
-  const tgId = user?.id;
+  /* ───────── BOT SETTINGS (READ ONLY) ───────── */
+  const [botSettings, setBotSettings] = useState<BotSettings | null>(null);
 
-  /* ───────── SERVER SETTINGS ───────── */
-  const [serverSettings, setServerSettings] =
-    useState<SettingsDraft | null>(null);
+  /* ───────── MINI APP SETTINGS ───────── */
+  const [homeView, setHomeView] = useState<HomeView>("trades");
 
-  /* ───────── DRAFT SETTINGS ───────── */
-  const [draft, setDraft] = useState<SettingsDraft>({
-    pnlAlerts: false,
-    tradeAlerts: false,
-    limit: "0",
-  });
-
-  /* ───────── LOAD SETTINGS ───────── */
   useEffect(() => {
     if (!tgId) return;
 
-    getSettings(tgId)
-      .then((data) => {
-        const normalized: SettingsDraft = {
-          pnlAlerts: data.pnl_alerts,
-          tradeAlerts: data.trade_alerts,
-          limit: String(data.limit),
-        };
-
-        setServerSettings(normalized);
-        setDraft(normalized);
-      })
-      .catch((err) => {
-        console.error("Failed to load settings", err);
+    getSettings(tgId).then((data) => {
+      setBotSettings({
+        pnlAlerts: data.pnl_alerts,
+        tradeAlerts: data.trade_alerts,
+        limit: String(data.limit),
       });
+    });
+
+    const saved = localStorage.getItem("miniapp_home_view");
+    if (saved === "trades" || saved === "pnl") {
+      setHomeView(saved);
+    }
   }, [tgId]);
 
-  /* ───────── VALIDATION ───────── */
-  const limitValid =
-    draft.limit !== "" &&
-    !isNaN(Number(draft.limit)) &&
-    Number(draft.limit) >= 0;
-
-  const hasChanges =
-    !!serverSettings &&
-    (draft.pnlAlerts !== serverSettings.pnlAlerts ||
-      draft.tradeAlerts !== serverSettings.tradeAlerts ||
-      draft.limit !== serverSettings.limit);
-
-  const saveEnabled = hasChanges && limitValid;
-
-  /* ───────── SAVE ───────── */
-  const handleSave = async () => {
-    if (!tgId) return;
-
-    try {
-      await saveSettings({
-        tg_id: tgId,
-        pnl_alerts: draft.pnlAlerts,
-        trade_alerts: draft.tradeAlerts,
-        limit: Number(draft.limit),
-      });
-
-      setServerSettings(draft);
-      onClose();
-    } catch (err) {
-      console.error("Save failed", err);
-      alert("Failed to save settings");
-    }
+  const handleSave = () => {
+    localStorage.setItem("miniapp_home_view", homeView);
+    onClose();
   };
 
   return (
@@ -112,65 +75,76 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           </div>
         </div>
 
-        <button
-          onClick={onClose}
-          className="text-white/50 hover:text-white"
-          aria-label="Close"
-        >
+        <button onClick={onClose} className="text-white/50 hover:text-white">
           ✕
         </button>
       </div>
 
       {/* CONTENT */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
-        <section className="space-y-5">
-          <h3 className="text-xs uppercase tracking-widest text-neutral-500">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
+        {/* BOT SETTINGS */}
+        <section>
+          <h3 className="text-xs uppercase tracking-widest text-neutral-500 mb-4">
             Bot Settings
           </h3>
 
-          <ToggleRow
-            label="PNL Alerts"
-            value={draft.pnlAlerts}
-            onChange={(v) => setDraft({ ...draft, pnlAlerts: v })}
-          />
+          {botSettings && (
+            <pre className="text-sm leading-7 text-neutral-300 whitespace-pre">
+📈 Trade Alerts        : {botSettings.tradeAlerts ? "ON" : "OFF"}
+💼 PnL Alerts          : {botSettings.pnlAlerts ? "ON" : "OFF"}
+💲 Trade Alert Limit   : ${botSettings.limit}
+            </pre>
+          )}
+        </section>
 
-          <ToggleRow
-            label="Trade Alerts"
-            value={draft.tradeAlerts}
-            onChange={(v) => setDraft({ ...draft, tradeAlerts: v })}
-          />
+        {/* MINI APP SETTINGS */}
+        <section>
+          <h3 className="text-xs uppercase tracking-widest text-neutral-500 mb-4">
+            Mini App Home
+          </h3>
 
-          <div className="space-y-1">
-            <label className="text-sm text-neutral-300">
-              Trade Alert Limit (USD)
-            </label>
-            <input
-              type="number"
-              value={draft.limit}
-              onChange={(e) =>
-                setDraft({ ...draft, limit: e.target.value })
-              }
-              className="w-full rounded-md bg-neutral-800 px-3 py-2 outline-none"
+          <div className="space-y-3">
+            <RadioRow
+              label="Trades"
+              active={homeView === "trades"}
+              onClick={() => setHomeView("trades")}
             />
-            {!limitValid && (
-              <p className="text-xs text-red-400">
-                Enter a valid number ≥ 0
-              </p>
+
+            <RadioRow
+              label="PnL"
+              active={homeView === "pnl"}
+              onClick={() => setHomeView("pnl")}
+            />
+
+            {homeView === "pnl" && (
+              <div className="text-sm text-yellow-400 pt-2">
+                🚧 PnL dashboard is coming soon.
+                <br />
+                You’ll be notified when it’s ready.
+              </div>
             )}
+          </div>
+        </section>
+
+        {/* ABOUT */}
+        <section className="pt-6 border-t border-white/10 text-sm text-neutral-400">
+          <div className="mb-2">About Us & It</div>
+          <div>
+            Follow Us{" "}
+            <span className="text-purple-400">@TestCOCOONBot</span>
           </div>
         </section>
       </div>
 
       {/* SAVE BAR */}
-      <div className="border-t border-neutral-800 p-4">
+      <div className="border-t border-neutral-800 p-4 space-y-2">
+        <div className="text-right text-xs text-neutral-500">
+          v0.1.0
+        </div>
+
         <button
-          disabled={!saveEnabled}
           onClick={handleSave}
-          className={`w-full rounded-md py-3 font-semibold transition ${
-            saveEnabled
-              ? "bg-purple-600 hover:bg-purple-700"
-              : "bg-neutral-700 cursor-not-allowed"
-          }`}
+          className="w-full rounded-md py-3 font-semibold bg-neutral-700 hover:bg-neutral-600"
         >
           Save
         </button>
@@ -179,32 +153,26 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   );
 }
 
-/* ───────── TOGGLE ROW ───────── */
+/* ───────── RADIO ROW ───────── */
 
-function ToggleRow({
+function RadioRow({
   label,
-  value,
-  onChange,
+  active,
+  onClick,
 }: {
   label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-sm">{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        className={`relative h-8 w-16 rounded-full transition ${
-          value ? "bg-green-600" : "bg-red-500/80"
-        }`}
-      >
-        <span
-          className={`absolute top-1 h-6 w-6 rounded-full bg-white transition ${
-            value ? "right-1" : "left-1"
-          }`}
-        />
-      </button>
-    </div>
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition ${
+        active ? "bg-purple-600" : "bg-neutral-800"
+      }`}
+    >
+      <span>{label}</span>
+      <span className="text-sm">{active ? "✓" : ""}</span>
+    </button>
   );
 }
