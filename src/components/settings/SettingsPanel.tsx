@@ -31,9 +31,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   /* ───────── MINI APP SETTINGS ───────── */
   const [homeView, setHomeView] = useState<HomeView>("trades");
 
-  /* ───────── LOAD DATA (FIXED) ───────── */
+  /* ───────── LOAD DATA ───────── */
   useEffect(() => {
-    if (!user || !user.id) return;
+    if (!user?.id) return;
 
     const tgId = user.id;
 
@@ -58,6 +58,45 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const handleSave = () => {
     localStorage.setItem("miniapp_home_view", homeView);
     onClose();
+  };
+
+  /* ───────── ALERT SUMMARY RENDER ───────── */
+  const renderAlertSummary = () => {
+    if (!botSettings) return null;
+
+    return (
+      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-sm space-y-2">
+        <div className="font-semibold text-white mb-2">
+          Alert Summary
+        </div>
+
+        <div className="flex justify-between">
+          <span>📈 Trade Alerts</span>
+          <span className="font-medium">
+            {botSettings.tradeAlerts ? "ON" : "OFF"}
+            {botSettings.tradeAlerts && (
+              <span className="text-neutral-400">
+                {" "}(&gt;${botSettings.limit})
+              </span>
+            )}
+          </span>
+        </div>
+
+        <div className="flex justify-between">
+          <span>💼 PnL Alerts</span>
+          <span className="font-medium">
+            {botSettings.pnlAlerts ? "ON" : "OFF"}
+          </span>
+        </div>
+
+        <div className="flex justify-between text-neutral-400">
+          <span>🐋 Whale Alerts</span>
+          <span className="font-medium">
+            Managed via Bot
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -99,30 +138,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             Bot Settings
           </h3>
 
-          {botSettings && (
-            <div className="space-y-2 text-sm text-neutral-300">
-              <div className="flex justify-between">
-                <span>📈 Trade Alerts</span>
-                <span className="font-medium">
-                  {botSettings.tradeAlerts ? "ON" : "OFF"}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>💼 PnL Alerts</span>
-                <span className="font-medium">
-                  {botSettings.pnlAlerts ? "ON" : "OFF"}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span>💲 Trade Alert Limit</span>
-                <span className="font-medium">
-                  ${botSettings.limit}
-                </span>
-              </div>
-            </div>
-          )}
+          {renderAlertSummary()}
         </section>
 
         {/* MINI APP HOME */}
@@ -156,9 +172,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         {/* ABOUT */}
         <section className="pt-6 border-t border-white/10 text-sm text-neutral-400">
-          <div className="mb-2">About Us & It</div>
+          <div className="mb-2">About</div>
           <div>
-            Follow Us{" "}
+            Follow us{" "}
             <span className="text-purple-400">@TestCOCOONBot</span>
           </div>
         </section>
